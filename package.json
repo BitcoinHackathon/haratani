@@ -1,9 +1,9 @@
 {
-  "name": "BITBOX-React-Scaffold",
+  "name": "wormhole-react-scaffold",
   "license": "MIT",
-  "description": "Basic react app w/ BITBOX bindings",
+  "description": "Basic react app w/ Wormhole SDK bindings",
   "author": "Gabriel Cardona @ Bitcoin.com",
-  "version": "1.5.1",
+  "version": "0.2.0",
   "private": true,
   "dependencies": {
     "node-sass": "^4.9.0",
@@ -19,6 +19,6 @@
     "eject": "react-scripts eject"
   },
   "devDependencies": {
-    "bitbox-cli": "1.5.1"
+    "wormholecash": "0.2.0"
   }
 }
