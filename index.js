@@ -46,19 +46,20 @@ async function sendTransaction(
     .flatten()
     .orderBy(["satoshis"], ["desc"])
     .value();
-  console.log("utxos:", utxos);
 
-  const originalAmount = utxos.reduce((r, utxo) => {
-    // TODO: confirmation数を加味する
-    // console.log(utxo);
-    return false;
-    transactionBuilder.addInput(utxo.txid, utxo.vout);
-    return r + utxo.satoshis;
-  }, 0);
+  // const originalAmount = utxos.reduce((r, utxo) => {
+  //   // TODO: confirmation数を加味する
+  //   // console.log(utxo);
+  //   return r + utxo.satoshis;
+  // }, 0);
+  transactionBuilder.addInput(utxos[0].txid, utxos[0].vout);
+  let originalAmount = utxos[0].satoshis;
+  console.log("utxos:", originalAmount);
 
   // お釣りを計算
-  let fee = 500;
+  let fee = 600;
   let changeAmount = originalAmount - sendAmount - fee;
+  console.log("change", changeAmount);
 
   // 取引用outputを追加
   let lockTimeBuf = Buffer.alloc(4);
@@ -82,7 +83,6 @@ async function sendTransaction(
   let p2sh_hash160 = BITBOX.Crypto.hash160(data);
   let scriptPubKey = BITBOX.Script.scriptHash.output.encode(p2sh_hash160);
   let address = BITBOX.Address.fromOutputScript(scriptPubKey, "testnet");
-  console.log("addy", address);
   // console.log(`script addr: ${address}`);
 
   transactionBuilder.addOutput(address, sendAmount);
@@ -105,10 +105,10 @@ async function sendTransaction(
 
   BITBOX.RawTransactions.sendRawTransaction(hex).then(
     result => {
-      // console.log(result);
+      console.log(result);
     },
     err => {
-      // console.log(err);
+      console.log(err);
     }
   );
 }
