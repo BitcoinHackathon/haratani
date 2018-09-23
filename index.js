@@ -33,9 +33,12 @@ function sendTransaction(node, txid, originalAmount, vout, toAddress, hashedSecr
 
   transactionBuilder.addInput(txid, vout);
 
-  let fee = 250;
+  let fee = 259;
   let sendAmount = originalAmount - fee;
 
+  let lockTimeBuf = Buffer.alloc(4);
+  lockTimeBuf.writeUInt32LE(Math.floor(Date.now() / 1000) + unlockFor, 0);
+  
   let data = BITBOX.Script.encode([
     BITBOX.Script.opcodes.OP_IF,
     BITBOX.Script.opcodes.OP_HASH160,
@@ -43,12 +46,20 @@ function sendTransaction(node, txid, originalAmount, vout, toAddress, hashedSecr
     BITBOX.Script.opcodes.OP_EQUALVERIFY,
     ...p2pkhScript(toAddress),
     BITBOX.Script.opcodes.OP_ELSE,
-    Date.now() + unlockFor,
+    lockTimeBuf,
     BITBOX.Script.opcodes.OP_CHECKLOCKTIMEVERIFY,
     BITBOX.Script.opcodes.OP_DROP,
-    ...p2pkhScript(Wormhole.HDNode.toCashAddress(node))
+    ...p2pkhScript(Wormhole.HDNode.toCashAddress(node)),
+    BITBOX.Script.opcodes.OP_ENDIF
   ]);
-  transactionBuilder.addOutput(data, sendAmount);
+  console.log(`p2script: ${data.toString('hex')}`);
+
+  let p2sh_hash160 = BITBOX.Crypto.hash160(data);
+  let scriptPubKey = BITBOX.Script.scriptHash.output.encode(p2sh_hash160);
+  let address = BITBOX.Address.fromOutputScript(scriptPubKey);
+  console.log(`script addr: ${address}`);
+
+  transactionBuilder.addOutput(address, sendAmount);
 
   let keyPair = BITBOX.HDNode.toKeyPair(node);
   let redeemScript;
@@ -66,6 +77,7 @@ function sendTransaction(node, txid, originalAmount, vout, toAddress, hashedSecr
 }
 
 const secret = BITBOX.Crypto.randomBytes(32);
+console.log(`secret: ${secret.toString('hex')}`);
 
 let mnemonic = 'abstract general fiscal enough behind patch nephew fever float parrot afford barely describe motion long that neither have raw shift index reveal cloth change'
 
