@@ -1,34 +1,31 @@
 let BITBOXCli = require('bitbox-cli/lib/bitbox-cli').default;
 let BITBOX = new BITBOXCli({restURL: 'https://trest.bitcoin.com/v1/'});
 
-let wormhole = require('wormholecash/lib/Wormhole').default;
-let Wormhole = new wormhole({restURL: 'https://trest.bitcoin.com/v1/'});
-
-const secret = Buffer.from("e3fc868e27cbd6ac67264c2bfea1c4f97a4d72db7810f44e75382a0d4bb04d22", "hex");
-const p2script = Buffer.from("63a914ce447aea9359c747e9b1403ed6fc4543a06b1de68876a9196fae5bfab392f367f779ba42070252d18880880c1e4129a21d88ac67042bedb85bb17576a9196fae5bfab392f367f779ba42070252d18880880c1e4129a21d88ac68", "hex");
-const scriptAddr = "bchtest:pqyvjfrgff4fvw3z8s9qst3sss87ms8rqv6das3tu2";
-
+const secret = Buffer.from("cb5394594391c66e5573bf79f9b2a8a54a4df3726efd45f8913dd57763a82c0a", "hex");
+const p2script = Buffer.from("63a9145a25871c72b30b770911c945d28c90e44a7c4d668768", "hex");
+const scriptAddr = "bchtest:pp5zcxexs3m0xmhv4gfs4gysc5lhgm938un4u7yk28";
 
 function getNode(mnemonic) {
-  let rootSeed = Wormhole.Mnemonic.toSeed(mnemonic);
+  let rootSeed = BITBOX.Mnemonic.toSeed(mnemonic);
   // master HDNode
-  let masterHDNode = Wormhole.HDNode.fromSeed(rootSeed, "testnet");
+  let masterHDNode = BITBOX.HDNode.fromSeed(rootSeed, "testnet");
 
   // HDNode of BIP44 account
-  let account = Wormhole.HDNode.derivePath(masterHDNode, "m/44'/145'/0'");
+  let account = BITBOX.HDNode.derivePath(masterHDNode, "m/44'/145'/0'");
 
   // derive the first external change address HDNode
-  let change = Wormhole.HDNode.derivePath(account, "0/0");
+  let change = BITBOX.HDNode.derivePath(account, "0/0");
 
   return change;
 }
 
 let mnemonic = 'abstract general fiscal enough behind patch nephew fever float parrot afford barely describe motion long that neither have raw shift index reveal cloth change'
+mnemonic = 'defense simple crew earn matter mask coral jeans twelve split finger armed'
 let node = getNode(mnemonic);
 console.log(node);
 
-let cashAddress = Wormhole.HDNode.toCashAddress(node);
-let legacyAddress = Wormhole.Address.toLegacyAddress(cashAddress);
+let cashAddress = BITBOX.HDNode.toCashAddress(node);
+let legacyAddress = BITBOX.Address.toLegacyAddress(cashAddress);
 console.log(`cashAddress: ${cashAddress}`);
 console.log(`cashAddress(legacy): ${legacyAddress}`);
 
@@ -45,8 +42,6 @@ function sendTransaction(node, txid, originalAmount, vout, toAddress, secret, re
   let encodedScript = BITBOX.Script.encode(redeemScript);
   let key = BITBOX.HDNode.toKeyPair(node);
 
-  transactionBuilder.sign(0, key, undefined, transactionBuilder.hashTypes.SIGHASH_ALL, originalAmount)
-
   let hashType = 0xc1;
 
   let tx = transactionBuilder.transaction.buildIncomplete()
@@ -56,11 +51,8 @@ function sendTransaction(node, txid, originalAmount, vout, toAddress, secret, re
   let hostSig = key.sign(sigHash).toScriptSignature(hashType);
 
   let unlockScript = [
-    BITBOX.ECPair.toPublicKey(key),
-    hostSig,
     secret,
     BITBOX.Script.opcodes.OP_TRUE,
-    redeemScript.length,
   ]
 
   let children = unlockScript.concat(redeemScript);
@@ -77,9 +69,9 @@ function sendTransaction(node, txid, originalAmount, vout, toAddress, secret, re
 
 (async () => {
   try {
-    let details = await Wormhole.Address.details([scriptAddr]);
+    let details = await BITBOX.Address.details([scriptAddr]);
     console.log(details);
-    let utxo = await Wormhole.Address.utxo([scriptAddr]);
+    let utxo = await BITBOX.Address.utxo([scriptAddr]);
     console.log(utxo);
 
     let result = await sendTransaction(
