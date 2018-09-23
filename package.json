@@ -6,6 +6,7 @@
   "version": "0.6.0",
   "private": true,
   "dependencies": {
+    "bitbox-cli": "^1.6.6",
     "lodash": "^4.17.11",
     "node-sass": "^4.9.0",
     "react": "^16.2.0",
@@ -21,7 +22,6 @@
     "coverage:report": "nyc --reporter=html mocha --require babel-core/register --timeout 5000"
   },
   "devDependencies": {
-    "wormholecash": "0.6.0",
     "chai": "^4.1.2",
     "flow-bin": "^0.64.0",
     "nyc": "^11.6.0",
