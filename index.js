@@ -4,6 +4,8 @@ let BITBOX = new BITBOXCli({restURL: 'https://trest.bitcoin.com/v1/'});
 let wormhole = require('wormholecash/lib/Wormhole').default;
 let Wormhole = new wormhole({restURL: 'https://trest.bitcoin.com/v1/'});
 
+const _ = require('lodash');
+
 function getNode(mnemonic) {
   let rootSeed = Wormhole.Mnemonic.toSeed(mnemonic);
   // master HDNode
@@ -28,17 +30,29 @@ function p2pkhScript(toAddress) {
   ]
 }
 
-function sendTransaction(node, txid, originalAmount, vout, toAddress, hashedSecret, unlockFor) {
+async function sendTransaction(node, sendAmount, toAddress, hashedSecret, unlockFor) {
   let transactionBuilder = new BITBOX.TransactionBuilder('testnet');
 
-  transactionBuilder.addInput(txid, vout);
+  // add input
+  let utxos = _.chain(await Wormhole.Address.utxo([cashAddress]))
+    .flatten()
+    .orderBy(['satoshis'], ['desc'])
+    .value();
 
-  let fee = 259;
-  let sendAmount = originalAmount - fee;
+  const originalAmount = utxos.reduce((r, utxo) => {
+    // TODO: confirmation数を加味する
+    transactionBuilder.addInput(utxo.txid, utxo.vout);
+    return r + utxo.satoshis;
+  }, 0);
 
+  // お釣りを計算
+  let fee = 500;
+  let changeAmount = originalAmount - sendAmount - fee;
+
+  // 取引用outputを追加
   let lockTimeBuf = Buffer.alloc(4);
   lockTimeBuf.writeUInt32LE(Math.floor(Date.now() / 1000) + unlockFor, 0);
-  
+
   let data = BITBOX.Script.encode([
     BITBOX.Script.opcodes.OP_IF,
     BITBOX.Script.opcodes.OP_HASH160,
@@ -60,6 +74,9 @@ function sendTransaction(node, txid, originalAmount, vout, toAddress, hashedSecr
   console.log(`script addr: ${address}`);
 
   transactionBuilder.addOutput(address, sendAmount);
+
+  // お釣りを追加
+  transactionBuilder.addOutput(Wormhole.HDNode.toCashAddress(node), changeAmount);
 
   let keyPair = BITBOX.HDNode.toKeyPair(node);
   let redeemScript;
@@ -98,14 +115,12 @@ console.log(`cashAddress(legacy): ${legacyAddress}`);
 
     let result = await sendTransaction(
       node,
-      utxo[0][0].txid,
-      utxo[0][0].satoshis,
-      utxo[0][0].vout,
+      2000,
       cashAddress,
       BITBOX.Crypto.hash160(secret),
       60 * 60 * 24 * 14 // 2 weeks
     );
-    // console.log(result);
+    console.log(result);
   } catch (error) {
     console.error(error);
   }
